@@ -47,7 +47,7 @@ const Index = () => {
 
     if (!result.canceled) {
       router.push({
-        pathname: "(app)/analysis",
+        pathname: "/(app)/analysis",
         params: { imageUri: result.assets[0].uri }
       });
     }
@@ -59,13 +59,37 @@ const Index = () => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
+      base64: true,
     });
 
     if (!result.canceled) {
-      router.push({
-        pathname: "(app)/analysis",
-        params: { imageUri: result.assets[0].uri }
-      });
+      try {
+        const formData = new FormData();
+        const response = await fetch(result.assets[0].uri);
+        const blob = await response.blob();
+        formData.append('file', blob, 'chart.png');
+        
+        const uploadResponse = await fetch('http://127.0.0.1:8000/process-image/', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Upload failed');
+        }
+
+        const data = await uploadResponse.json();
+
+        router.push({
+          pathname: "/(app)/analysis",
+          params: { result: data }
+        });
+      } catch (error) {
+        console.error('Error uploading image:', error);
+      }
     }
   };
 

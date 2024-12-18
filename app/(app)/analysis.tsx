@@ -7,29 +7,11 @@ const lineGradient = require("../../assets/images/Line Gradient.png");
 const radialGradient = require("../../assets/images/Radial Gradient.png");
 const circles = require("../../assets/images/circles.png");
 
-const Analysis = () => {
-  const { imageUri } = useLocalSearchParams();
-  const [analysis, setAnalysis] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+import { RouteProp } from '@react-navigation/native';
+type AnalysisRouteProp = RouteProp<{ params: { result: JSON } }, 'params'>;
 
-  const processImage = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('YOUR_API_ENDPOINT', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ imageUri }),
-      });
-      const data = await response.json();
-      setAnalysis(data.analysis);
-    } catch (error) {
-      console.error('Error processing image:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const Analysis = ({ route }: { route: AnalysisRouteProp }) => {
+  const { result } = route.params; 
 
   return (
     <View style={styles.container}>
@@ -37,24 +19,9 @@ const Analysis = () => {
       <Image source={lineGradient} style={styles.backgroundImage} />
 
       <View style={styles.contentContainer}>
-        <Image 
-          source={{ uri: imageUri as string }} 
-          style={styles.selectedImage} 
-        />
-
-        <Pressable 
-          onPress={processImage} 
-          style={styles.buttonStyle}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Processing...' : 'Process Image'}
-          </Text>
-        </Pressable>
-
-        {analysis && (
+        {result && (
           <View style={styles.analysisContainer}>
-            <Text style={styles.analysisText}>{analysis}</Text>
+            <Text style={styles.analysisText}>{JSON.stringify(result)}</Text>
           </View>
         )}
       </View>
