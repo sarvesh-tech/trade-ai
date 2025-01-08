@@ -1,14 +1,23 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import JSONResponse
 from PIL import Image
+
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 import io
 from uuid import uuid4
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-@app.post("/process-image/")  # Ensure this is a POST method
-async def process_image(file: UploadFile = File(...)):
-    print(f"Received file: {file.filename}")
+@app.post("/process-image/")
+@limiter.limit("6/minute")
+async def process_image(request: Request, file: UploadFile = File(...)):  # Changed parameter name to 'file'
+    print(f"Received file: {file.filename}")  # Updated to use 'file' instead of 'request'
     if not file.content_type.startswith("image/"):
         return JSONResponse({"error": "File is not an image"}, status_code=400)
 
@@ -17,7 +26,7 @@ async def process_image(file: UploadFile = File(...)):
         image_id = str(uuid4())
 
         # Save the image temporarily
-        contents = await file.read()
+        contents = await file.read()  # Updated to use 'file' instead of 'request'
         image = Image.open(io.BytesIO(contents))
 
         # Example: Simulate processing (replace with your actual image processing logic)
@@ -34,7 +43,7 @@ async def process_image(file: UploadFile = File(...)):
     except Exception as e:
         return JSONResponse({"error": f"Failed to process image: {str(e)}"}, status_code=500)
 
-#tester route yo
+#tester route
 @app.get("/")
 async def root():
     return {"message": "FastAPI server is running"}
