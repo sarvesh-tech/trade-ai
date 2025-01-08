@@ -1,27 +1,50 @@
 import { Text, View, StyleSheet, Pressable, Image } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
 import colors from "../../assets/colors/colors";
 
 const lineGradient = require("../../assets/images/Line Gradient.png");
 const radialGradient = require("../../assets/images/Radial Gradient.png");
 const circles = require("../../assets/images/circles.png");
 
-import { RouteProp } from '@react-navigation/native';
-type AnalysisRouteProp = RouteProp<{ params: { result: JSON } }, 'params'>;
+const Analysis = () => {
+  const { result, imageUri } = useLocalSearchParams();
 
-const Analysis = ({ route }: { route: AnalysisRouteProp }) => {
-  const { result } = route.params; 
+  // Ensure `result` is a string before parsing
+  const resultString = Array.isArray(result) ? result[0] : result;
+  const parsedResult = resultString ? JSON.parse(resultString) : null;
 
   return (
     <View style={styles.container}>
-      <Image source={radialGradient} style={styles.backgroundImage} />
-      <Image source={lineGradient} style={styles.backgroundImage} />
 
       <View style={styles.contentContainer}>
-        {result && (
+        {/* Display the uploaded image */}
+        {imageUri && (
+          <Image
+            source={{ uri: imageUri as string }} // Cast to string to avoid TypeScript errors
+            style={styles.selectedImage}
+          />
+        )}
+
+        {/* Rounded box with "Very Bullish" text and a circle */}
+        <View style={styles.bullishContainer}>
+          <View style={styles.bullishContent}>
+            <Text style={styles.bullishTitle}>Very Bullish</Text>
+            <Text style={styles.bullishDescription}>
+              This stock seems to have a lot of upside, it is recommended to take a long position
+            </Text>
+          </View>
+          <View style={styles.percentageContainer}>
+            <Text style={styles.percentageText}>89%</Text>
+          </View>
+        </View>
+
+        {/* Display the analysis result */}
+        {parsedResult && (
           <View style={styles.analysisContainer}>
-            <Text style={styles.analysisText}>{JSON.stringify(result)}</Text>
+            <Text style={styles.analysisText}>Image ID: {parsedResult.image_id}</Text>
+            <Text style={styles.analysisText}>Width: {parsedResult.width}</Text>
+            <Text style={styles.analysisText}>Height: {parsedResult.height}</Text>
+            <Text style={styles.analysisText}>Message: {parsedResult.message}</Text>
           </View>
         )}
       </View>
@@ -52,33 +75,60 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 15,
     marginTop: 50,
+    marginBottom: 20, // Add some spacing below the image
   },
-  buttonStyle: {
-    backgroundColor: colors.green,
-    borderRadius: 15,
-    marginTop: 20,
-    paddingHorizontal: 84,
-    paddingVertical: 22,
-    marginHorizontal: 35,
-  },
-  buttonText: {
-    fontFamily: "PlusJakartaSans-Bold",
-    fontSize: 16,
-    color: colors.black,
-    textAlign: "center",
-  },
-  analysisContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  bullishContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 2,
+    borderColor: colors.stroke,
     borderRadius: 15,
     padding: 20,
-    marginTop: 20,
+    marginBottom: 20,
+    width: '100%',
+  },
+  bullishContent: {
+    flex: 1,
+    marginRight: 15,
+  },
+  bullishTitle: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 20,
+    color: colors.green,
+    marginBottom: 8,
+  },
+
+  bullishDescription: {
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 12,
+    color: colors.white,
+  },
+  percentageContainer: {
+    width: 84,
+    height: 84,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 8,
+    borderColor: colors.green, // semi-transparent green
+  },
+  percentageText: {
+    fontFamily: "PlusJakartaSans-Bold",
+    fontSize: 24,
+    color: colors.white,
+  },
+  analysisContainer: {
+    borderRadius: 15,
+    padding: 20,
     width: '100%',
   },
   analysisText: {
-    fontFamily: "PlusJakartaSans-Medium",
-    fontSize: 16,
+    fontFamily: "PlusJakartaSans-Regular",
+    fontSize: 12,
     color: colors.white,
   },
 });
 
-export default Analysis; 
+export default Analysis;

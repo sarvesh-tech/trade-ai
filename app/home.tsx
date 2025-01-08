@@ -3,10 +3,17 @@ import { router } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
 import colors from "../assets/colors/colors";
+import { FASTAPI_SERVER_URL } from '@env';
+
 
 const lineGradient = require("../assets/images/Line Gradient.png");
 const radialGradient = require("../assets/images/Radial Gradient.png");
 const circles = require("../assets/images/circles.png");
+
+const SERVER_URL = FASTAPI_SERVER_URL;
+console.log("Server URL:", FASTAPI_SERVER_URL);
+
+
 
 const Index = () => {
   const showImageOptions = () => {
@@ -48,7 +55,10 @@ const Index = () => {
     if (!result.canceled) {
       router.push({
         pathname: "/(app)/analysis",
-        params: { imageUri: result.assets[0].uri }
+        params: { 
+          imageUri: result.assets[0].uri, // Pass the image URI
+          result: JSON.stringify({}), // Pass an empty result for now
+        }
       });
     }
   };
@@ -59,33 +69,53 @@ const Index = () => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
-      base64: true,
     });
-
+  
     if (!result.canceled) {
       try {
         const formData = new FormData();
-        const response = await fetch(result.assets[0].uri);
-        const blob = await response.blob();
-        formData.append('file', blob, 'chart.png');
-        
-        const uploadResponse = await fetch('http://127.0.0.1:8000/process-image/', {
+  
+        // Extract the file URI and type
+        const { uri, type } = result.assets[0];
+  
+        // Create a file-like object
+        const file = {
+          uri, // Ensure the URI is prefixed with 'file://'
+          name: 'chart.png', // Name of the file
+          type: type || 'image/png', // Use the type from the result or default to 'image/png'
+        };
+  
+        // Append the file to the FormData
+        formData.append('file', file as any); // Cast to 'any' to avoid TypeScript errors
+  
+        console.log("Image URI:", uri);
+        console.log("FormData:", formData);
+  
+        console.log("Sending request to:", SERVER_URL);
+  
+        const uploadResponse = await fetch(SERVER_URL, {
           method: 'POST',
           body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+          // Do not set 'Content-Type' manually for FormData
         });
-
+  
+        console.log("Upload response status:", uploadResponse.status);
+  
         if (!uploadResponse.ok) {
+          const errorResponse = await uploadResponse.json(); // Parse the error response
+          console.error("Backend error response:", errorResponse);
           throw new Error('Upload failed');
         }
-
+  
         const data = await uploadResponse.json();
-
+        console.log("Backend response:", data);
+  
         router.push({
           pathname: "/(app)/analysis",
-          params: { result: data }
+          params: { 
+            result: JSON.stringify(data), // Pass the backend response
+            imageUri: uri, // Pass the image URI
+          }
         });
       } catch (error) {
         console.error('Error uploading image:', error);

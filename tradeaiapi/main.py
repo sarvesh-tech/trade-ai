@@ -3,11 +3,10 @@ from fastapi.responses import JSONResponse
 from PIL import Image
 import io
 from uuid import uuid4
-import shutil
 
 app = FastAPI()
 
-@app.post("/process-image/")
+@app.post("/process-image/")  # Ensure this is a POST method
 async def process_image(file: UploadFile = File(...)):
     print(f"Received file: {file.filename}")
     if not file.content_type.startswith("image/"):
@@ -30,10 +29,12 @@ async def process_image(file: UploadFile = File(...)):
             "message": "Image processed successfully"
         }
 
-        # You can store the result, process it, or do whatever you need here
-        # For simplicity, returning a processed result immediately
-
         return result
 
     except Exception as e:
         return JSONResponse({"error": f"Failed to process image: {str(e)}"}, status_code=500)
+
+#tester route yo
+@app.get("/")
+async def root():
+    return {"message": "FastAPI server is running"}
