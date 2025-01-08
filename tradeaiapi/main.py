@@ -1,10 +1,52 @@
 from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import JSONResponse
-from PIL import Image
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-import io
-from uuid import uuid4
+import openai
+import os
+from dotenv import load_dotenv
+import base64
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Initialize OpenAI API
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+prompt = '''
+Analyze [STOCK/CRYPTO TICKER] or price action from the provided chart:
+
+If TICKER is valid in the image given:
+
+Current price, recent trends, and historical comparison.
+Key financial ratios and insights (P/E, EPS, ROE, etc.).
+Support/resistance levels and directional indicators.
+20-day, 50-day, and 200-day SMAs with trend analysis.
+Recent earnings, revenue growth, and EPS vs. estimates.
+Industry comparison and peer standing.
+Analyst ratings, target prices, upgrades/downgrades.
+Major news affecting valuation.
+Summary: Buy, Hold, or Sell with reasoning.
+
+If the image is not a stock/crypto chart:
+Provide an error message (e.g., 'Ticker not found. Please check the symbol.').
+
+If TICKER symbol is not given and only chart is given:
+Focus on price action, key levels (support/resistance), and trend analysis based on candlestick patterns, moving averages, and volume data."
+
+Output Rules:
+
+Always summarize each section in no more than 2 concise statements.
+Ensure consistent formatting for readability.
+If no valid data is available, state: 'Insufficient data to perform analysis.'
+Example Output for a Valid Ticker:
+Analysis for [TICKER] as of [DATE]:
+
+Current Price and Trends: [Concise 2-sentence summary].
+Key Financial Ratios: [Concise 2-sentence summary].
+Technical Levels and Momentum: [Concise 2-sentence summary].
+Analyst Sentiment and Risks: [Concise 2-sentence summary].
+'''
 
 # Custom key function to get real IP address
 def get_real_ip(request: Request) -> str:
@@ -40,19 +82,36 @@ async def process_image(request: Request, file: UploadFile = File(...)):
         return JSONResponse({"error": "File is not an image"}, status_code=400)
 
     try:
-        image_id = str(uuid4())
+        # Read the image file
         contents = await file.read()
-        image = Image.open(io.BytesIO(contents))
 
-        result = {
-            "image_id": image_id,
-            "width": image.width,
-            "height": image.height,
-            "message": "Image processed successfully",
-            "client_ip": client_ip
-        }
+        # Encode the image bytes to Base64
+        image_base64 = base64.b64encode(contents).decode('utf-8')
 
-        return result
+        # Send the image to OpenAI for analysis
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",  # Use the appropriate model for image analysis
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}"
+                            },
+                        },
+                    ],
+                }
+            ],
+            max_tokens=300,  # Adjust based on your needs
+        )
+
+        # Extract the analysis result from the response
+        analysis_result = response.choices[0].message.content
+
+        return {"analysis": analysis_result}
 
     except Exception as e:
         return JSONResponse(

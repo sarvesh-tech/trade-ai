@@ -14,7 +14,6 @@ const SERVER_URL = FASTAPI_SERVER_URL;
 console.log("Server URL:", FASTAPI_SERVER_URL);
 
 
-
 const Index = () => {
   const showImageOptions = () => {
     Alert.alert(
